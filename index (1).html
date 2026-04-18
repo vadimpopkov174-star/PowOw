@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Snowpal</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#f2f2f7; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif; }
+.screen { width:100%; height:100%; position:fixed; top:0; left:0; display:flex; flex-direction:column; background:#f2f2f7; transition:opacity .3s,transform .3s; }
+.screen.hidden { opacity:0; pointer-events:none; transform:translateY(14px); }
+#splash { background:linear-gradient(160deg,#a8d8f0,#c5e8f7,#b0d4ee); align-items:center; justify-content:center; }
+#splash canvas { position:absolute; top:0; left:0; width:100%; height:100%; }
+.logo { font-size:42px; font-weight:800; color:#fff; letter-spacing:2px; z-index:2; }
+.sb { background:#fff; padding:env(safe-area-inset-top,14px) 20px 8px; display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:600; color:#000; flex-shrink:0; min-height:44px; }
+.sc { flex:1; overflow-y:auto; padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)); -webkit-overflow-scrolling:touch; }
+.tabbar { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,.95); border-top:.5px solid #e0e0e0; display:flex; padding:10px 0; padding-bottom:calc(10px + env(safe-area-inset-bottom,0px)); backdrop-filter:blur(10px); z-index:100; }
+.tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:4px 0; }
+.tl { font-size:10px; font-weight:500; color:#8e8e93; }
+.tab.on .tl { color:#3a7fc1; }
+.av { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#5b9bd5,#3a7fc1); display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; font-weight:600; }
+.gft { background:#e8f4ff; border:none; border-radius:20px; padding:8px 14px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#3a7fc1; cursor:pointer; }
+.bn { margin:0 16px 16px; background:linear-gradient(135deg,#4da6e8,#2d8fd6); border-radius:16px; padding:16px; display:flex; align-items:center; justify-content:space-between; color:#fff; }
+.bge { background:#fff; color:#2d8fd6; font-size:12px; font-weight:700; padding:4px 10px; border-radius:20px; display:inline-block; }
+.ms { background:#fff; margin:0 0 12px; padding:16px 20px; }
+.msh { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.mst { font-size:20px; font-weight:700; color:#000; }
+.msarr { font-size:20px; color:#c7c7cc; cursor:pointer; }
+.fbar { background:#fff; padding:10px 16px 12px; display:flex; align-items:center; gap:8px; flex-shrink:0; border-bottom:.5px solid #e0e0e0; }
+.fi { width:32px; height:32px; border-radius:8px; background:#f2f2f7; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.fm { flex:1; height:32px; background:#f2f2f7; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; font-size:14px; color:#000; cursor:pointer; }
+.chips { padding:10px 16px; display:flex; gap:8px; overflow-x:auto; flex-shrink:0; background:#fff; border-bottom:.5px solid #e0e0e0; -webkit-overflow-scrolling:touch; }
+.chip { padding:6px 14px; border-radius:20px; font-size:13px; white-space:nowrap; cursor:pointer; border:1px solid #e0e0e0; background:#fff; color:#3c3c43; flex-shrink:0; }
+.chip.active { background:#3a7fc1; color:#fff; border-color:#3a7fc1; }
+.gear-list { padding:8px 16px; display:flex; flex-direction:column; gap:10px; }
+.gear-card { background:#fff; border-radius:16px; padding:14px; display:flex; gap:12px; cursor:pointer; align-items:center; }
+.gear-img { width:80px; height:80px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:32px; }
+.gear-body { flex:1; min-width:0; }
+.gear-name { font-size:15px; font-weight:600; color:#000; margin-bottom:3px; line-height:1.3; }
+.gear-sub { font-size:12px; color:#8e8e93; margin-bottom:8px; }
+.gear-tags { display:flex; gap:6px; flex-wrap:wrap; }
+.gear-tag { background:#f2f2f7; border-radius:20px; padding:3px 10px; font-size:11px; color:#3c3c43; }
+.gear-tag.blue { background:#e8f4ff; color:#3a7fc1; }
+.loading { text-align:center; padding:40px 20px; color:#8e8e93; font-size:15px; }
+.detail-nav { background:#fff; padding:12px 20px; display:flex; align-items:center; gap:12px; flex-shrink:0; border-bottom:.5px solid #e0e0e0; }
+.back-btn { font-size:26px; color:#3a7fc1; cursor:pointer; line-height:1; }
+.detail-nav-title { font-size:17px; font-weight:600; color:#000; }
+.detail-content { flex:1; overflow-y:auto; padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)); }
+.detail-hero { background:#fff; padding:24px 20px 20px; display:flex; flex-direction:column; align-items:center; margin-bottom:12px; }
+.detail-img { width:120px; height:120px; border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:52px; margin-bottom:16px; }
+.detail-name { font-size:22px; font-weight:700; color:#000; text-align:center; margin-bottom:4px; }
+.detail-brand { font-size:14px; color:#8e8e93; text-align:center; margin-bottom:16px; }
+.detail-tags { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.detail-tag { background:#e8f4ff; color:#3a7fc1; border-radius:20px; padding:5px 14px; font-size:13px; font-weight:500; }
+.detail-section { background:#fff; margin:0 0 12px; padding:16px 20px; }
+.detail-section-title { font-size:12px; font-weight:600; color:#8e8e93; text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px; }
+.detail-row { display:flex; justify-content:space-between; align-items:flex-start; padding:9px 0; border-bottom:.5px solid #f2f2f7; }
+.detail-row:last-child { border-bottom:none; }
+.detail-label { font-size:14px; color:#8e8e93; flex-shrink:0; }
+.detail-value { font-size:14px; color:#000; font-weight:500; text-align:right; max-width:65%; }
+.detail-desc { font-size:15px; color:#3c3c43; line-height:1.65; }
+.detail-link { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:#fff; margin-bottom:12px; cursor:pointer; text-decoration:none; }
+.detail-link-label { font-size:13px; color:#8e8e93; margin-bottom:2px; }
+.detail-link-text { font-size:15px; color:#3a7fc1; font-weight:500; }
+.ov { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.35); z-index:200; display:flex; align-items:flex-end; }
+.ov.hidden { display:none; }
+.sheet { background:#fff; border-radius:20px 20px 0 0; padding:20px 24px; padding-bottom:calc(40px + env(safe-area-inset-bottom,0px)); width:100%; }
+.stt { font-size:18px; font-weight:700; color:#000; margin-bottom:20px; }
+.sop { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:.5px solid #f2f2f7; cursor:pointer; }
+.sop:last-child { border-bottom:none; }
+.sl { font-size:16px; color:#000; }
+.rb { width:22px; height:22px; border-radius:50%; border:2px solid #c7c7cc; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.rb.on { border-color:#3a7fc1; background:#3a7fc1; }
+.rb.on::after { content:''; width:8px; height:8px; border-radius:50%; background:#fff; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="screen" id="splash" style="display:flex;">
+  <canvas id="sc"></canvas>
+  <div class="logo">SNOWPAL</div>
+</div>
+
+<!-- MAIN -->
+<div class="screen hidden" id="main">
+  <div class="sb">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="av" id="user-avatar">Е</div>
+      <span style="font-size:17px;font-weight:700;color:#000;" id="user-name">Евгений</span>
+    </div>
+    <button class="gft">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3a7fc1" stroke-width="2" stroke-linecap="round"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+      За друга
+    </button>
+  </div>
+  <div style="background:#fff;padding:8px 20px 12px;flex-shrink:0;">
+    <div style="background:#f2f2f7;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;color:#8e8e93;font-size:15px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Поиск
+    </div>
+  </div>
+  <div class="sc">
+    <div style="height:12px;"></div>
+    <div class="bn">
+      <div>
+        <div style="font-size:12px;opacity:.85;margin-bottom:4px;">Для любителей халявы!</div>
+        <div style="font-size:16px;font-weight:700;line-height:1.3;margin-bottom:10px;max-width:180px;">Раздаём промокоды на покупку снаряжения!</div>
+        <div style="display:flex;gap:6px;"><span class="bge">-30%</span><span class="bge">-15%</span><span class="bge">-50%</span></div>
+      </div>
+      <div style="font-size:64px;line-height:1;">🎿</div>
+    </div>
+    <div class="ms">
+      <div class="msh"><span class="mst">Снаряжение</span><span class="msarr" id="goto-catalog">›</span></div>
+      <div id="main-preview"><div class="loading" style="padding:20px 0;">Загрузка...</div></div>
+    </div>
+  </div>
+  <div class="tabbar">
+    <div class="tab on" data-s="main"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3a7fc1" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="tl" style="color:#3a7fc1;">Главная</span></div>
+    <div class="tab" data-s="catalog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="tl">Каталог</span></div>
+    <div class="tab" data-s="blog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span class="tl">Блог</span></div>
+    <div class="tab" data-s="podcasts"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="11" r="4"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg><span class="tl">Подкасты</span></div>
+  </div>
+</div>
+
+<!-- CATALOG -->
+<div class="screen hidden" id="catalog">
+  <div class="sb"><span style="font-size:17px;font-weight:600;">Снаряжение</span></div>
+  <div class="fbar">
+    <div class="fi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+    <div class="fm" id="filter-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg> Фильтр</div>
+    <div class="fi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M7 12h10M10 18h4"/></svg></div>
+  </div>
+  <div class="chips" id="gender-chips">
+    <div class="chip active" data-g="all">Все</div>
+    <div class="chip" data-g="мужской">Мужское</div>
+    <div class="chip" data-g="женский">Женское</div>
+    <div class="chip" data-g="унисекс">Унисекс</div>
+  </div>
+  <div class="sc">
+    <div class="gear-list" id="gear-list"><div class="loading">Загрузка...</div></div>
+  </div>
+  <div class="ov hidden" id="filter-ov">
+    <div class="sheet">
+      <div class="stt">Подкатегория</div>
+      <div class="sop" data-c="all"><span class="sl">Все</span><div class="rb on"></div></div>
+      <div class="sop" data-c="фрирайд"><span class="sl">Фрирайд</span><div class="rb"></div></div>
+      <div class="sop" data-c="фристайл"><span class="sl">Фристайл / Парк</span><div class="rb"></div></div>
+      <div class="sop" data-c="карвинг"><span class="sl">Карвинг</span><div class="rb"></div></div>
+      <div class="sop" data-c="универсал"><span class="sl">Универсал</span><div class="rb"></div></div>
+    </div>
+  </div>
+  <div class="tabbar">
+    <div class="tab" data-s="main"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="tl">Главная</span></div>
+    <div class="tab on" data-s="catalog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3a7fc1" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="tl" style="color:#3a7fc1;">Каталог</span></div>
+    <div class="tab" data-s="blog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span class="tl">Блог</span></div>
+    <div class="tab" data-s="podcasts"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="11" r="4"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg><span class="tl">Подкасты</span></div>
+  </div>
+</div>
+
+<!-- DETAIL -->
+<div class="screen hidden" id="detail">
+  <div class="detail-nav">
+    <div class="back-btn" id="detail-back">‹</div>
+    <div class="detail-nav-title" id="detail-nav-title">Снаряжение</div>
+  </div>
+  <div class="detail-content" id="detail-content"></div>
+</div>
+
+<!-- BLOG -->
+<div class="screen hidden" id="blog">
+  <div class="sb"><span style="font-size:17px;font-weight:600;">Блог</span></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#8e8e93;">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="1.5" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span style="font-size:15px;">Скоро</span>
+  </div>
+  <div class="tabbar">
+    <div class="tab" data-s="main"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="tl">Главная</span></div>
+    <div class="tab" data-s="catalog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="tl">Каталог</span></div>
+    <div class="tab on" data-s="blog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3a7fc1" stroke-width="1.8" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span class="tl" style="color:#3a7fc1;">Блог</span></div>
+    <div class="tab" data-s="podcasts"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="11" r="4"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg><span class="tl">Подкасты</span></div>
+  </div>
+</div>
+
+<!-- PODCASTS -->
+<div class="screen hidden" id="podcasts">
+  <div class="sb"><span style="font-size:17px;font-weight:600;">Подкасты</span></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#8e8e93;">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="11" r="4"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>
+    <span style="font-size:15px;">Скоро</span>
+  </div>
+  <div class="tabbar">
+    <div class="tab" data-s="main"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="tl">Главная</span></div>
+    <div class="tab" data-s="catalog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="tl">Каталог</span></div>
+    <div class="tab" data-s="blog"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="1.8" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span class="tl">Блог</span></div>
+    <div class="tab on" data-s="podcasts"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3a7fc1" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="11" r="4"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg><span class="tl" style="color:#3a7fc1;">Подкасты</span></div>
+  </div>
+</div>
+
+<script>
+// SNOWFLAKES
+const cvs=document.getElementById('sc');
+const cx=cvs.getContext('2d');
+cvs.width=window.innerWidth; cvs.height=window.innerHeight;
+const fl=Array.from({length:60},()=>({x:Math.random()*cvs.width,y:Math.random()*cvs.height,r:Math.random()*4+1.5,s:Math.random()*0.6+0.2,d:Math.random()*0.3-0.15,o:Math.random()*0.5+0.3}));
+function df(){cx.clearRect(0,0,cvs.width,cvs.height);fl.forEach(f=>{cx.beginPath();cx.arc(f.x,f.y,f.r,0,Math.PI*2);cx.fillStyle=`rgba(255,255,255,${f.o})`;cx.fill();f.y+=f.s;f.x+=f.d;if(f.y>cvs.height){f.y=-10;f.x=Math.random()*cvs.width;}if(f.x>cvs.width)f.x=0;if(f.x<0)f.x=cvs.width;});requestAnimationFrame(df);}
+df();
+
+// TELEGRAM
+if(window.Telegram&&window.Telegram.WebApp){
+  const tg=window.Telegram.WebApp; tg.ready(); tg.expand();
+  const u=tg.initDataUnsafe&&tg.initDataUnsafe.user;
+  if(u){document.getElementById('user-name').textContent=u.first_name||'Пользователь';document.getElementById('user-avatar').textContent=(u.first_name||'П').charAt(0).toUpperCase();}
+}
+
+// DATA
+const CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CLrnhx_XI8V7t-coMG35ty_f6nKdI7mKfiOsc0WZxAG9ty3uEnfdzEeOAgvruzR24S6FVNURZbPh/pub?gid=0&single=true&output=csv';
+let allGear=[], filterGender='all', filterCat='all', prevScreen='catalog';
+
+function parseCSV(text){
+  const lines=text.split('\n').filter(l=>l.trim());
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=[]; let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      if(line[i]==='"'){inQ=!inQ;}
+      else if(line[i]===','&&!inQ){vals.push(cur.trim());cur='';}
+      else{cur+=line[i];}
+    }
+    vals.push(cur.trim());
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=(vals[i]||'').replace(/^"|"$/g,'').trim());
+    return obj;
+  }).filter(r=>r['Название']);
+}
+
+function emoji(item){
+  const s=(item['Подкатегория']||'').toLowerCase();
+  if(s.includes('карвинг'))return'🏂';
+  if(s.includes('пухляк'))return'❄️';
+  if(s.includes('фристайл')||s.includes('парк'))return'🛹';
+  if(s.includes('фрирайд'))return'🏔️';
+  return'🎿';
+}
+
+function bg(item){
+  const s=(item['Подкатегория']||'').toLowerCase();
+  if(s.includes('карвинг'))return'linear-gradient(135deg,#b0d4ee,#7ab8e0)';
+  if(s.includes('пухляк'))return'linear-gradient(135deg,#c5e8f7,#90c8e8)';
+  if(s.includes('фристайл')||s.includes('парк'))return'linear-gradient(135deg,#c8dff0,#94bcd8)';
+  if(s.includes('фрирайд'))return'linear-gradient(135deg,#8aaccf,#5580a8)';
+  return'linear-gradient(135deg,#b0d4ee,#7ab8e0)';
+}
+
+function matches(item){
+  const g=(item['Пол']||'').toLowerCase();
+  const s=(item['Подкатегория']||'').toLowerCase();
+  const n=(item['Назначение']||'').toLowerCase();
+  if(filterGender!=='all'&&!g.includes(filterGender))return false;
+  if(filterCat!=='all'&&!( s.includes(filterCat)||n.includes(filterCat)))return false;
+  return true;
+}
+
+function cardHTML(item,idx,compact=false){
+  if(compact){
+    return`<div class="gear-card" onclick="openDetail(${idx})" style="margin:0;padding:10px 14px;">
+      <div class="gear-img" style="background:${bg(item)};width:52px;height:52px;border-radius:10px;font-size:24px;">${emoji(item)}</div>
+      <div class="gear-body">
+        <div class="gear-name" style="font-size:14px;">${item['Название']}</div>
+        <div class="gear-sub">${item['Подкатегория']||''} · ${item['Пол']||''}</div>
+      </div>
+    </div>`;
+  }
+  return`<div class="gear-card" onclick="openDetail(${idx})">
+    <div class="gear-img" style="background:${bg(item)}">${emoji(item)}</div>
+    <div class="gear-body">
+      <div class="gear-name">${item['Название']}</div>
+      <div class="gear-sub">${item['Бренд']} · ${item['Год']||''}</div>
+      <div class="gear-tags">
+        <span class="gear-tag blue">${(item['Подкатегория']||'').split('/')[0].trim()}</span>
+        <span class="gear-tag">${item['Жесткость']||''}</span>
+        <span class="gear-tag">${(item['Пол']||'').split(',')[0].trim()}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderList(){
+  const filtered=allGear.filter(matches);
+  const el=document.getElementById('gear-list');
+  el.innerHTML=filtered.length
+    ? filtered.map((item,i)=>cardHTML(item,allGear.indexOf(item))).join('')
+    : '<div class="loading">Ничего не найдено</div>';
+}
+
+function renderPreview(){
+  const el=document.getElementById('main-preview');
+  el.innerHTML='<div style="display:flex;flex-direction:column;gap:8px;">'+
+    allGear.slice(0,3).map((item,i)=>cardHTML(item,i,true)).join('')+
+  '</div>';
+}
+
+function openDetail(idx){
+  prevScreen='catalog';
+  const item=allGear[idx];
+  document.getElementById('detail-nav-title').textContent=item['Название'];
+  document.getElementById('detail-content').innerHTML=`
+    <div class="detail-hero">
+      <div class="detail-img" style="background:${bg(item)}">${emoji(item)}</div>
+      <div class="detail-name">${item['Название']}</div>
+      <div class="detail-brand">${item['Бренд']}</div>
+      <div class="detail-tags">
+        ${item['Подкатегория']?`<span class="detail-tag">${item['Подкатегория']}</span>`:''}
+        ${item['Пол']?`<span class="detail-tag">${item['Пол']}</span>`:''}
+        ${item['Год']?`<span class="detail-tag">${item['Год']}</span>`:''}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Характеристики</div>
+      ${item['Уровень']?`<div class="detail-row"><span class="detail-label">Уровень</span><span class="detail-value">${item['Уровень']}</span></div>`:''}
+      ${item['Жесткость']?`<div class="detail-row"><span class="detail-label">Жёсткость</span><span class="detail-value">${item['Жесткость']}</span></div>`:''}
+      ${item['Прогиб']?`<div class="detail-row"><span class="detail-label">Прогиб</span><span class="detail-value">${item['Прогиб']}</span></div>`:''}
+      ${item['Геометрия']?`<div class="detail-row"><span class="detail-label">Геометрия</span><span class="detail-value">${item['Геометрия']}</span></div>`:''}
+      ${item['Назначение']?`<div class="detail-row"><span class="detail-label">Назначение</span><span class="detail-value">${item['Назначение']}</span></div>`:''}
+      ${item['Ростовки']?`<div class="detail-row"><span class="detail-label">Ростовки (см)</span><span class="detail-value">${item['Ростовки']}</span></div>`:''}
+    </div>
+    ${item['Описание']?`<div class="detail-section"><div class="detail-section-title">Описание</div><div class="detail-desc">${item['Описание']}</div></div>`:''}
+    ${item['Ссылка на бренд']?`<a class="detail-link" href="${item['Ссылка на бренд']}" target="_blank"><div><div class="detail-link-label">Купить на</div><div class="detail-link-text">Траектория</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a7fc1" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></a>`:''}
+    <div style="height:20px;"></div>
+  `;
+  showScreen('detail');
+}
+
+async function loadData(){
+  try{
+    const r=await fetch(CSV);
+    const t=await r.text();
+    allGear=parseCSV(t);
+    renderList();
+    renderPreview();
+  }catch(e){
+    document.getElementById('gear-list').innerHTML='<div class="loading">Ошибка загрузки. Проверьте соединение.</div>';
+    document.getElementById('main-preview').innerHTML='';
+  }
+}
+
+// NAVIGATION
+const SS=['main','catalog','blog','podcasts','detail'];
+function showScreen(id){SS.forEach(s=>{const e=document.getElementById(s);if(e)e.classList.toggle('hidden',s!==id);});}
+
+setTimeout(()=>{
+  document.getElementById('splash').classList.add('hidden');
+  setTimeout(()=>{showScreen('main');loadData();},300);
+},2500);
+
+document.querySelectorAll('.tab[data-s]').forEach(t=>t.addEventListener('click',()=>showScreen(t.dataset.s)));
+document.getElementById('goto-catalog')?.addEventListener('click',()=>showScreen('catalog'));
+document.getElementById('detail-back').addEventListener('click',()=>showScreen('catalog'));
+
+// GENDER FILTER
+document.querySelectorAll('#gender-chips .chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('#gender-chips .chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    filterGender=c.dataset.g;
+    renderList();
+  });
+});
+
+// CAT FILTER
+document.getElementById('filter-btn').addEventListener('click',()=>document.getElementById('filter-ov').classList.remove('hidden'));
+document.getElementById('filter-ov').addEventListener('click',e=>{if(e.target===document.getElementById('filter-ov'))document.getElementById('filter-ov').classList.add('hidden');});
+document.querySelectorAll('.sop[data-c]').forEach(op=>{
+  op.addEventListener('click',()=>{
+    document.querySelectorAll('.sop[data-c] .rb').forEach(r=>r.classList.remove('on'));
+    op.querySelector('.rb').classList.add('on');
+    filterCat=op.dataset.c;
+    renderList();
+    setTimeout(()=>document.getElementById('filter-ov').classList.add('hidden'),280);
+  });
+});
+</script>
+</body>
+</html>
