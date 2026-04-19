@@ -1,3 +1,6 @@
+Index · HTML
+Copy
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -313,14 +316,26 @@ const CSV_GEAR='https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CLrnhx_XI8V7t
 const CSV_VIDEO='https://docs.google.com/spreadsheets/d/e/2PACX-1vR4CLrnhx_XI8V7t-coMG35ty_f6nKdI7mKfiOsc0WZxAG9ty3uEnfdzEeOAgvruzR24S6FVNURZbPh/pub?gid=1688160618&single=true&output=csv';
 let allGear=[],allVideo=[],filterGender='all',filterCat='all',currentIdx=null,prevScreen='catalog';
  
+function parseCSVLine(line){
+  const vals=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){
+      if(inQ&&line[i+1]==='"'){cur+='"';i++;}
+      else{inQ=!inQ;}
+    }else if(c===','&&!inQ){vals.push(cur);cur='';}
+    else{cur+=c;}
+  }
+  vals.push(cur);
+  return vals.map(v=>v.replace(/^"|"$/g,'').trim());
+}
 function parseCSV(text){
-  const lines=text.split('\n').filter(l=>l.trim());
-  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  const headers=parseCSVLine(lines[0]);
   return lines.slice(1).map(line=>{
-    const vals=[];let cur='',inQ=false;
-    for(let i=0;i<line.length;i++){if(line[i]==='"'){inQ=!inQ;}else if(line[i]===','&&!inQ){vals.push(cur);cur='';}else{cur+=line[i];}}
-    vals.push(cur);
-    const obj={};headers.forEach((h,i)=>obj[h]=(vals[i]||'').replace(/^"|"$/g,'').trim());
+    const vals=parseCSVLine(line);
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=(vals[i]||''));
     return obj;
   }).filter(r=>r[headers[0]]);
 }
@@ -602,4 +617,5 @@ setTimeout(function(){
 </script>
 </body>
 </html>
+ 
  
